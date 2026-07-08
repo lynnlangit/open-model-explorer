@@ -5,6 +5,8 @@ pick a model, chat with it, compare two side by side, upload medical images, and
 any model from Hugging Face live. Everything runs on your Mac via Ollama; **nothing
 leaves the device.**
 
+<img src="https://github.com/lynnlangit/open-model-explorer/blob/main/images/open-model-app.png">
+
 ## What it does
 
 - Clean **white** chat UI at `http://localhost:8000`
@@ -87,32 +89,9 @@ The app itself still needs no changes; Ollama handles the auth.
 > Uploaded images are re-encoded to 8-bit for the models — this is exploration, not
 > diagnostic-grade viewing of 16-bit or whole-slide scans.
 
-## Push to GitHub
+## Try It!
 
-From the project folder:
-
-```bash
-git init
-git add .
-git commit -m "Initial commit: Open Model Explorer (local LLM chat harness)"
-
-# Create an empty repo on your team GitHub, then:
-git branch -M main
-git remote add origin https://github.com/<team-org>/open-model-explorer.git
-git push -u origin main
-```
-
-`.gitignore` already excludes `.venv/` and caches, so only source files are committed.
-Before the first push, confirm nothing sensitive is staged:
-
-```bash
-git status            # review the file list
-git ls-files | cat    # exactly what will be committed
-```
-
-## Suggested live demo script
-
-1. Open the app — clean white UI, Gemma 3 (multimodal) selected by default.
+1. Open the app — select one (or two) open models for testing from the drop down list(s).
 2. Send a clinical prompt to a medical model, e.g. *"What are first-line treatments for
    stage 2 hypertension?"*, and note the tokens/sec readout.
 3. Turn on **Compare**, put **MedGemma 4B vs. Llama 3.1 8B** on the same question —
@@ -120,4 +99,4 @@ git ls-files | cat    # exactly what will be committed
 4. Attach a medical image (chest X-ray / histology) and compare **MedGemma 4B (vision)
    vs. Llama 3.2 Vision** — the medical grounding shows.
 5. Click **+ Add model from Hugging Face**, paste
-   `hf.co/EnlistedGhost/Pixtral-12B-Ollama-GGUF`, and let the room watch it pull live.
+   `hf.co/EnlistedGhost/Pixtral-12B-Ollama-GGUF`, and watch the model being pulled from HF live.
