@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Open Model Explorer</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --panel: #ffffff;
+    --border: #e4e7ec;
+    --text: #1a1a1a;
+    --muted: #667085;
+    --accent: #1462d6;
+    --accent-soft: #eaf1fd;
+    --user-bubble: #1462d6;
+    --bot-bubble: #f5f7fa;
+    --ok: #067647;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  header h1 {
+    font-size: 18px;
+    font-weight: 650;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  header .spacer { flex: 1; }
+
+  .control { display: flex; align-items: center; gap: 8px; }
+  label.small { font-size: 13px; color: var(--muted); }
+  select, input, button {
+    font: inherit;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    padding: 8px 10px;
+  }
+  select { min-width: 210px; }
+  button {
+    cursor: pointer;
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    font-weight: 550;
+  }
+  button.secondary { background: #fff; color: var(--accent); }
+  button.toggle { background: #fff; color: var(--muted); border-color: var(--border); }
+  button.toggle.active { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+  button:disabled { opacity: .5; cursor: default; }
+  #modelBWrap { display: none; }
+  body.compare #modelBWrap { display: flex; }
+
+  .disclaimer {
+    background: #fff8e6;
+    border-bottom: 1px solid #f2e6bf;
+    color: #7a5b00;
+    font-size: 13px;
+    padding: 7px 24px;
+    text-align: center;
+  }
+
+  main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .thread { width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 16px; }
+  body.compare .thread { max-width: 1200px; }
+
+  .msg { display: flex; }
+  .msg.user { justify-content: flex-end; }
+  .bubble {
+    padding: 12px 16px;
+    border-radius: 14px;
+    max-width: 82%;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  .msg.user .bubble { background: var(--user-bubble); color: #fff; border-bottom-right-radius: 4px; }
+  .msg.bot .bubble { background: var(--bot-bubble); color: var(--text); border-bottom-left-radius: 4px; max-width: 100%; }
+  .who { font-size: 12px; color: var(--muted); margin: 0 4px 4px; font-weight: 600; }
+
+  /* Compare columns */
+  .cols { display: grid; grid-template-columns: 1fr; gap: 16px; width: 100%; }
+  body.compare .cols { grid-template-columns: 1fr 1fr; }
+  .col { display: flex; flex-direction: column; }
+  .col .bubble { border-bottom-left-radius: 4px; }
+
+  .empty {
+    color: var(--muted);
+    text-align: center;
+    margin-top: 12vh;
+    line-height: 1.6;
+  }
+  .empty h2 { color: var(--text); font-weight: 600; margin-bottom: 6px; }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    justify-content: center;
+  }
+  .composer {
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    gap: 10px;
+  }
+  .composer textarea {
+    flex: 1;
+    resize: none;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    min-height: 48px;
+    max-height: 160px;
+    font: inherit;
+  }
+  .composer button { padding: 0 22px; }
+
+  /* Add-from-HF modal */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(20,25,35,.35);
+    display: none; align-items: center; justify-content: center; z-index: 50;
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    background: #fff; border-radius: 14px; width: 92%; max-width: 560px;
+    padding: 24px; box-shadow: 0 20px 60px rgba(0,0,0,.2);
+  }
+  .modal h3 { margin: 0 0 6px; font-size: 18px; }
+  .modal p { color: var(--muted); font-size: 14px; margin: 0 0 16px; }
+  .modal input { width: 100%; margin-bottom: 14px; }
+  .modal .row { display: flex; gap: 10px; justify-content: flex-end; }
+  .examples { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .examples code {
+    background: var(--accent-soft); color: var(--accent);
+    padding: 2px 6px; border-radius: 5px; cursor: pointer;
+    display: inline-block; margin: 3px 4px 0 0;
+  }
+  .progress-wrap { margin-top: 10px; display: none; }
+  .progress-wrap.show { display: block; }
+  .bar { height: 8px; background: var(--border); border-radius: 5px; overflow: hidden; }
+  .bar > div { height: 100%; width: 0%; background: var(--accent); transition: width .2s; }
+  .status { font-size: 13px; color: var(--muted); margin-top: 8px; min-height: 18px; }
+  .badge { font-size: 11px; color: var(--ok); font-weight: 600; }
+
+  /* Per-response stats line */
+  .stats { font-size: 11px; color: var(--muted); margin: 6px 4px 0; min-height: 14px; }
+  .stats b { color: var(--text); font-weight: 600; }
+
+  /* Example prompt chips */
+  .chips {
+    width: 100%; max-width: 900px; margin: 0 auto;
+    display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+    padding-bottom: 12px;
+  }
+  body.compare .chips { max-width: 1200px; }
+  .chip {
+    font-size: 13px; color: var(--accent); background: var(--accent-soft);
+    border: 1px solid #d4e2fb; border-radius: 999px; padding: 6px 13px;
+    cursor: pointer; white-space: nowrap;
+  }
+  .chip:hover { background: #dceafd; }
+  .chips-label { font-size: 12px; color: var(--muted); align-self: center; margin-right: 2px; }
+
+  /* Image upload */
+  .attach {
+    background: #fff; color: var(--muted); border: 1px solid var(--border);
+    border-radius: 10px; padding: 0 14px; font-size: 20px; cursor: pointer;
+  }
+  .attach:hover { color: var(--accent); border-color: var(--accent); }
+  .preview-bar {
+    width: 100%; max-width: 900px; margin: 0 auto; display: none;
+    align-items: center; gap: 10px; padding-bottom: 10px;
+  }
+  .preview-bar.show { display: flex; }
+  .preview-bar img { height: 54px; border-radius: 8px; border: 1px solid var(--border); }
+  .preview-bar .rm {
+    cursor: pointer; color: var(--muted); font-size: 13px; text-decoration: underline;
+  }
+  .vwarn {
+    font-size: 12px; color: #b54708; background: #fff4ed;
+    border: 1px solid #fdd9c7; border-radius: 8px; padding: 4px 10px;
+  }
+  .msg.user .bubble img { display: block; max-width: 220px; border-radius: 10px; margin-bottom: 8px; }
+  /* One-click pull banner */
+  .pull-banner {
+    width: 100%; max-width: 900px; margin: 0 auto 10px; display: none;
+    align-items: center; gap: 12px; background: var(--accent-soft);
+    border: 1px solid #d4e2fb; border-radius: 10px; padding: 10px 14px;
+    font-size: 13px; color: var(--text);
+  }
+  .pull-banner.show { display: flex; }
+  body.compare .pull-banner { max-width: 1200px; }
+  .pull-banner .grow { flex: 1; }
+  .pull-banner .bar { flex: 1; height: 8px; background: #fff; border-radius: 5px; overflow: hidden; }
+  .pull-banner .bar > div { height: 100%; width: 0%; background: var(--accent); transition: width .2s; }
+  .pull-banner button { padding: 6px 14px; font-size: 13px; white-space: nowrap; }
+  .pull-banner .pstat { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+  .preview-bar .thumb { position: relative; }
+  .preview-bar .thumb .x {
+    position: absolute; top: -6px; right: -6px; background: #fff; border: 1px solid var(--border);
+    border-radius: 50%; width: 18px; height: 18px; line-height: 16px; text-align: center;
+    font-size: 12px; cursor: pointer; color: var(--muted);
+  }
+
+  /* Limits hint + character counter */
+  .limits {
+    width: 100%; max-width: 900px; margin: 0 auto; text-align: center;
+    font-size: 11px; color: var(--muted); padding-bottom: 8px;
+  }
+  body.compare .limits { max-width: 1200px; }
+  /* Example cards in the empty welcome state */
+  .ex-grid {
+    display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+    max-width: 620px; margin: 26px auto 0;
+  }
+  .ex-card {
+    border: 1px solid var(--border); border-radius: 12px; background: #fff;
+    padding: 11px 15px; cursor: pointer; text-align: left; max-width: 190px;
+  }
+  .ex-card:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .ex-card .t { font-size: 13px; color: var(--text); font-weight: 550; }
+
+  /* Composer refinements */
+  .input-wrap { flex: 1; position: relative; display: flex; }
+  .input-wrap textarea { width: 100%; }
+  .counter {
+    position: absolute; bottom: 7px; right: 12px; font-size: 11px; color: var(--muted);
+    background: rgba(255,255,255,.9); padding: 0 3px; border-radius: 4px; display: none;
+  }
+  .counter.show { display: block; }
+  .counter.over { color: #b42318; font-weight: 600; }
+  .iconbtn {
+    background: #fff; color: var(--muted); border: 1px solid var(--border);
+    border-radius: 10px; padding: 0 13px; cursor: pointer; font-size: 15px;
+  }
+  .iconbtn:hover { color: var(--accent); border-color: var(--accent); }
+  .popover {
+    position: absolute; bottom: 66px; right: 24px; z-index: 30; display: none;
+    background: #fff; border: 1px solid var(--border); border-radius: 10px;
+    box-shadow: 0 10px 34px rgba(0,0,0,.14); padding: 12px 15px;
+    font-size: 12px; color: var(--muted); max-width: 360px; line-height: 1.7;
+  }
+  .popover.show { display: block; }
+  .popover b { color: var(--text); }
+  .popover .ttl { color: var(--text); font-weight: 600; margin-bottom: 4px; font-size: 12px; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Open Model Explorer</h1>
+    <div class="control">
+      <label class="small" for="model">Model A</label>
+      <select id="model"></select>
+    </div>
+    <div class="control" id="modelBWrap">
+      <label class="small" for="modelB">Model B</label>
+      <select id="modelB"></select>
+    </div>
+    <button class="toggle" id="compareBtn">⇆ Compare two models</button>
+    <button class="secondary" id="addBtn">+ Add model from Hugging Face</button>
+    <div class="spacer"></div>
+    <button class="secondary" id="clearBtn">Clear chat</button>
+  </header>
+
+  <div class="disclaimer">
+    Research &amp; demonstration only. These open models are not validated for clinical use and must not inform patient care decisions.
+  </div>
+
+  <main>
+    <div class="thread" id="thread">
+      <div class="empty" id="empty">
+        <h2>Explore open foundational &amp; medical LLMs, locally</h2>
+        <div>Pick a model above, or turn on <b>Compare</b> to run two side by side.<br/>Everything runs on this Mac via Ollama — nothing leaves the device.</div>
+        <div class="ex-grid" id="exGrid">
+          <div class="ex-card" data-p="Generate a concise list of the top 3 clinical indicators of type 2 diabetes."><span class="t">Top 3 diabetes indicators</span></div>
+          <div class="ex-card" data-p="What are the first-line pharmacologic treatments for stage 2 hypertension?"><span class="t">First-line hypertension Rx</span></div>
+          <div class="ex-card" data-p="Summarize the mechanism of action of GLP-1 receptor agonists in two sentences."><span class="t">GLP-1 mechanism</span></div>
+          <div class="ex-card" data-p="List common differential diagnoses for acute chest pain in an adult."><span class="t">Chest pain differentials</span></div>
+          <div class="ex-card" data-p="Explain the difference between sensitivity and specificity to a first-year medical student."><span class="t">Sensitivity vs specificity</span></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer style="flex-direction:column; gap:0; position:relative;">
+    <div class="pull-banner" id="pullBanner"></div>
+    <div class="preview-bar" id="previewBar"></div>
+    <div class="composer">
+      <input type="file" id="imgInput" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp,image/tiff" multiple style="display:none" />
+      <button class="attach" id="attachBtn" title="Attach image(s) for vision models">🖼️</button>
+      <div class="input-wrap">
+        <textarea id="input" placeholder="Ask a question..." rows="1" maxlength="4000"></textarea>
+        <span class="counter" id="counter">0 / 4000</span>
+      </div>
+      <button class="iconbtn" id="infoBtn" title="Upload limits &amp; formats">ⓘ</button>
+      <button id="send">Send</button>
+    </div>
+    <div class="popover" id="limitsPop">
+      <div class="ttl">Upload limits</div>
+      <b>Images:</b> up to <b>3 files</b>, <b>≤ 10 MB</b> each.<br/>
+      Formats: PNG, JPG, WEBP, GIF, BMP, <b>TIFF</b>.<br/>
+      <b>Text prompt:</b> up to <b>4,000 characters</b>.<br/>
+      <span style="color:#b54708;">Note:</span> images are re-encoded (lossless PNG, ≤ 2048 px) for the model. Vision models ingest 8-bit tiles, so this is a research/exploration tool — not diagnostic-grade viewing of 16-bit or whole-slide scans.
+    </div>
+  </footer>
+
+  <!-- Add-from-HF modal -->
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <h3>Add a model</h3>
+      <p>Enter a <b>model ID</b> (not its display name) in one of two forms, then
+      Download. It pulls to this Mac and appears in the picker.</p>
+      <ul style="font-size:13px; color:var(--muted); margin:0 0 12px; padding-left:18px; line-height:1.7;">
+        <li><b>Ollama library name</b> — e.g. <code>mistral:7b</code>, <code>medgemma</code>, <code>llava:7b</code></li>
+        <li><b>Hugging Face GGUF repo</b> — e.g. <code>hf.co/username/Repo-Name-GGUF</code></li>
+      </ul>
+      <input id="hfInput" placeholder="mistral:7b  or  hf.co/username/Repo-Name-GGUF" />
+      <div class="examples">
+        Try:
+        <code data-fill="hf.co/EnlistedGhost/Pixtral-12B-Ollama-GGUF">Pixtral 12B (vision)</code>
+        <code data-fill="hf.co/MoMonir/Llama3-OpenBioLLM-8B-GGUF">OpenBioLLM 8B</code>
+        <code data-fill="mistral:7b">Mistral 7B</code>
+      </div>
+      <div class="progress-wrap" id="progWrap">
+        <div class="bar"><div id="barFill"></div></div>
+        <div class="status" id="pullStatus"></div>
+      </div>
+      <div class="row" style="margin-top:16px;">
+        <button class="secondary" id="cancelAdd">Close</button>
+        <button id="doPull">Download</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let compareMode = false;
+let turns = [];        // {role:'user', content, images?, previews?} | {role:'assistant', a:'', b:''}
+let labelIndex = {};   // model id -> display label
+let visionSet = new Set(); // model ids that accept images
+let installedSet = new Set(); // model ids currently installed in Ollama
+let pendingImages = [];    // [{ dataUrl, b64 }] staged for the next send
+let firstLoad = true;      // set Model A default only on initial catalog load
+
+// Upload limits (kept in sync with the on-screen hint).
+const MAX_IMAGES = 3;
+const MAX_FILE_MB = 10;
+const MAX_DIM = 2048;      // longest edge after downscaling (headroom for tiling VLMs)
+const MAX_CHARS = 4000;
+
+function labelFor(id) { return labelIndex[id] || id || "Model"; }
+
+// Ollama errors arrive as raw (sometimes nested) JSON — dig out the human message.
+function cleanError(raw) {
+  let msg = raw;
+  for (let i = 0; i < 4; i++) {
+    try {
+      const o = typeof msg === "string" ? JSON.parse(msg) : msg;
+      msg = o.error?.message ?? o.error ?? o.message ?? msg;
+      if (typeof msg !== "string") break;
+    } catch { break; }
+  }
+  if (typeof msg !== "string") msg = String(raw);
+  if (/does not support multimodal|multimodal data provided/i.test(msg))
+    return "This model can't read images. Pick a vision model (MedGemma, Pixtral, Llama 3.2 Vision, Gemma 3, LLaVA, or Moondream).";
+  if (/invalid model name|invalid reference|file does not exist/i.test(msg))
+    return "That isn’t a valid model ID. Use an Ollama name like “mistral:7b” or a repo like “hf.co/user/Repo-GGUF” — not the display label.";
+  if (/not found|try pulling|pull the model/i.test(msg))
+    return "Model not installed yet. Pull it first — open “Add model from Hugging Face” (it pre-fills the correct ID), then Download.";
+  return msg;
+}
+
+async function loadCatalog() {
+  const res = await fetch("/api/catalog");
+  const data = await res.json();
+  const inst = await (await fetch("/api/models")).json();
+  installedSet = new Set(inst.installed || []);
+  const known = new Set();
+  const curatedTokens = new Set(); // base tokens to dedupe near-duplicate user pulls
+
+  // Icon prefix: 👁 vision, ⚡ fast (blank otherwise); badge: ✓ installed / ⬇ pull.
+  function optText(m) {
+    const icon = m.vision ? "👁 " : (m.fast ? "⚡ " : "");
+    return icon + m.label + (m.installed ? "  ✓" : "  ⬇");
+  }
+  // Normalized base of a model id: last path segment, drop tag/quant suffix.
+  function baseToken(id) {
+    let s = id.toLowerCase().replace(/^hf\.co\//, "").split("/").pop();
+    return s.split(":")[0];
+  }
+
+  function fill(sel) {
+    const prev = sel.value;
+    sel.innerHTML = "";
+    for (const g of data.groups) {
+      const og = document.createElement("optgroup");
+      og.label = g.group;
+      for (const m of g.models) {
+        known.add(m.id); known.add(m.id + ":latest");
+        curatedTokens.add(baseToken(m.id));
+        labelIndex[m.id] = m.label;
+        if (m.vision) visionSet.add(m.id);
+        const opt = document.createElement("option");
+        opt.value = m.id;
+        opt.textContent = optText(m);
+        og.appendChild(opt);
+      }
+      sel.appendChild(og);
+    }
+    // "Your pulls": installed models not in the catalog, minus near-duplicates
+    // of a curated model (e.g. old medgemma experiments in various quants).
+    const tokens = [...curatedTokens].filter(t => t.length >= 4);
+    const isDup = (n) => {
+      const b = baseToken(n);
+      return tokens.some(t => b.includes(t) || t.includes(b));
+    };
+    const extra = (inst.installed || []).filter(n => !known.has(n) && !isDup(n));
+    if (extra.length) {
+      const og = document.createElement("optgroup");
+      og.label = "Your pulls";
+      for (const n of extra) {
+        labelIndex[n] = n;
+        const opt = document.createElement("option");
+        opt.value = n; opt.textContent = n + "  ✓";
+        og.appendChild(opt);
+      }
+      sel.appendChild(og);
+    }
+    if (prev) sel.value = prev;
+  }
+
+  fill($("model"));
+  fill($("modelB"));
+  // On first load, default Model A to multimodal Gemma 3 (text + image).
+  if (firstLoad) {
+    const DEFAULT_MODEL = "gemma3:4b";
+    if ([...$("model").options].some(o => o.value === DEFAULT_MODEL))
+      $("model").value = DEFAULT_MODEL;
+    firstLoad = false;
+  }
+  // Default Model B to a different entry than Model A for a useful comparison.
+  if (!$("modelB").value || $("modelB").value === $("model").value) {
+    const opts = [...$("modelB").options].map(o => o.value);
+    const alt = opts.find(v => v !== $("model").value);
+    if (alt) $("modelB").value = alt;
+  }
+  refreshPullBanner();
+}
+
+function render() {
+  const thread = $("thread");
+  $("empty").style.display = turns.length ? "none" : "block";
+  [...thread.querySelectorAll(".msg")].forEach(n => n.remove());
+
+  for (const t of turns) {
+    if (t.role === "user") {
+      const wrap = document.createElement("div");
+      wrap.className = "msg user";
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      if (t.previews) {
+        for (const src of t.previews) {
+          const img = document.createElement("img");
+          img.src = src;
+          bubble.appendChild(img);
+        }
+      }
+      bubble.appendChild(document.createTextNode(t.content));
+      wrap.appendChild(bubble);
+      thread.appendChild(wrap);
+    } else {
+      const wrap = document.createElement("div");
+      wrap.className = "msg bot";
+      const cols = document.createElement("div");
+      cols.className = "cols";
+      cols.appendChild(colNode(labelFor($("model").value), t.a, t.aStats));
+      if (compareMode) cols.appendChild(colNode(labelFor($("modelB").value), t.b, t.bStats));
+      wrap.appendChild(cols);
+      thread.appendChild(wrap);
+    }
+  }
+  const main = document.querySelector("main");
+  main.scrollTop = main.scrollHeight;
+}
+
+function colNode(label, text, stats) {
+  const col = document.createElement("div");
+  col.className = "col";
+  const who = document.createElement("div");
+  who.className = "who";
+  who.textContent = label;
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+  bubble.textContent = text || "…";
+  col.appendChild(who);
+  col.appendChild(bubble);
+  const meta = document.createElement("div");
+  meta.className = "stats";
+  if (stats && stats.tps) {
+    meta.innerHTML = `<b>${stats.tps.toFixed(1)}</b> tok/s · ${stats.tokens} tokens · ${stats.secs.toFixed(1)}s`;
+  }
+  col.appendChild(meta);
+  return col;
+}
+
+function historyFor(which, upto) {
+  // Build an Ollama message list for one model from the shared turns.
+  const msgs = [];
+  for (let i = 0; i < upto; i++) {
+    const t = turns[i];
+    if (t.role === "user") {
+      const m = { role: "user", content: t.content };
+      if (t.images && t.images.length) m.images = t.images;
+      msgs.push(m);
+    } else {
+      msgs.push({ role: "assistant", content: t[which] });
+    }
+  }
+  return msgs;
+}
+
+async function streamChat(model, history, onDelta) {
+  const res = await fetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model, messages: history }),
+  });
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = "";
+  let stats = null;
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let nl;
+    while ((nl = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, nl).trim();
+      buf = buf.slice(nl + 1);
+      if (!line) continue;
+      const obj = JSON.parse(line);
+      if (obj.error) { onDelta("\n⚠ " + cleanError(obj.error)); continue; }
+      if (obj.message && obj.message.content) onDelta(obj.message.content);
+      if (obj.done && obj.eval_count && obj.eval_duration) {
+        stats = {
+          tokens: obj.eval_count,
+          tps: obj.eval_count / (obj.eval_duration / 1e9),
+          secs: (obj.total_duration || obj.eval_duration) / 1e9,
+        };
+      }
+    }
+  }
+  return stats;
+}
+
+async function send() {
+  const text = $("input").value.trim();
+  const modelA = $("model").value;
+  const modelB = $("modelB").value;
+  if (!text || !modelA || (compareMode && !modelB)) return;
+
+  // If a selected model isn't installed, offer to pull it instead of erroring.
+  if (selectedModels().some(id => id && !isInstalled(id))) { refreshPullBanner(); return; }
+
+  $("input").value = "";
+  $("input").style.height = "auto";
+  const userTurn = { role: "user", content: text };
+  if (pendingImages.length) {
+    userTurn.images = pendingImages.map(p => p.b64);
+    userTurn.previews = pendingImages.map(p => p.dataUrl);
+    clearImages();
+  }
+  turns.push(userTurn);
+  const turn = { role: "assistant", a: "", b: "" };
+  turns.push(turn);
+  const idx = turns.length - 1;
+  render();
+  $("send").disabled = true;
+
+  const jobs = [
+    streamChat(modelA, historyFor("a", idx), (d) => { turn.a += d; render(); })
+      .then(s => { turn.aStats = s; render(); })
+      .catch(e => { turn.a += "\n[connection error] " + e.message; render(); }),
+  ];
+  if (compareMode) {
+    jobs.push(
+      streamChat(modelB, historyFor("b", idx), (d) => { turn.b += d; render(); })
+        .then(s => { turn.bStats = s; render(); })
+        .catch(e => { turn.b += "\n[connection error] " + e.message; render(); })
+    );
+  }
+  await Promise.all(jobs);
+  $("send").disabled = false;
+  $("input").focus();
+}
+
+// ---- Image attach ----
+function renderPreview() {
+  const bar = $("previewBar");
+  bar.innerHTML = "";
+  if (!pendingImages.length) { bar.classList.remove("show"); return; }
+  bar.classList.add("show");
+  pendingImages.forEach((im, i) => {
+    const thumb = document.createElement("span");
+    thumb.className = "thumb";
+    const img = document.createElement("img");
+    img.src = im.dataUrl;
+    thumb.appendChild(img);
+    const x = document.createElement("span");
+    x.className = "x"; x.textContent = "×";
+    x.onclick = () => { pendingImages.splice(i, 1); renderPreview(); };
+    thumb.appendChild(x);
+    bar.appendChild(thumb);
+  });
+  const count = document.createElement("span");
+  count.className = "rm";
+  count.textContent = `${pendingImages.length}/${MAX_IMAGES} image${pendingImages.length > 1 ? "s" : ""}`;
+  count.style.cursor = "default"; count.style.textDecoration = "none";
+  bar.appendChild(count);
+  // Warn if any selected model can't see images.
+  const sel = compareMode ? [$("model").value, $("modelB").value] : [$("model").value];
+  const blind = sel.filter(m => m && !visionSet.has(m));
+  if (blind.length) {
+    const w = document.createElement("span");
+    w.className = "vwarn";
+    w.textContent = "⚠ " + blind.map(labelFor).join(" & ") + " can't read images — pick a vision model.";
+    bar.appendChild(w);
+  }
+}
+function clearImages() {
+  pendingImages = [];
+  $("imgInput").value = "";
+  renderPreview();
+}
+function flashLimit(msg) {
+  const bar = $("previewBar");
+  bar.classList.add("show");
+  const w = document.createElement("span");
+  w.className = "vwarn"; w.textContent = "⚠ " + msg;
+  bar.appendChild(w);
+  setTimeout(renderPreview, 4000);
+}
+
+// Downscale (never upscale) then re-encode LOSSLESS PNG to avoid adding
+// compression artifacts on top of what the vision model already downsamples.
+function encodeCanvas(canvas) {
+  const dataUrl = canvas.toDataURL("image/png");
+  return { dataUrl, b64: dataUrl.split(",")[1] };
+}
+function drawScaled(source, sw, sh, drawFn) {
+  const scale = Math.min(1, MAX_DIM / Math.max(sw, sh));
+  const w = Math.round(sw * scale), h = Math.round(sh * scale);
+  const canvas = document.createElement("canvas");
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, w, h); // flatten transparency
+  drawFn(ctx, w, h);
+  return canvas;
+}
+const isTiff = (f) => /tiff?$/i.test(f.type) || /\.tiff?$/i.test(f.name);
+
+// Decode -> downscale -> lossless PNG. Rejects undecodable formats.
+function processFile(file) {
+  return new Promise((resolve, reject) => {
+    const looksImage = file.type.startsWith("image/") || isTiff(file);
+    if (!looksImage) return reject("“" + file.name + "” isn’t an image file.");
+    if (file.size > MAX_FILE_MB * 1024 * 1024)
+      return reject("“" + file.name + "” is over " + MAX_FILE_MB + " MB.");
+
+    // TIFF: browsers can't decode it — use UTIF.js to get raw RGBA, then canvas.
+    if (isTiff(file)) {
+      if (typeof UTIF === "undefined")
+        return reject("TIFF decoder isn’t loaded (needs internet). Export “" + file.name + "” as PNG or JPG.");
+      const fr = new FileReader();
+      fr.onload = () => {
+        try {
+          const ifds = UTIF.decode(fr.result);
+          UTIF.decodeImage(fr.result, ifds[0]);
+          const rgba = UTIF.toRGBA8(ifds[0]);
+          const sw = ifds[0].width, sh = ifds[0].height;
+          const src = document.createElement("canvas");
+          src.width = sw; src.height = sh;
+          src.getContext("2d").putImageData(new ImageData(new Uint8ClampedArray(rgba), sw, sh), 0, 0);
+          const canvas = drawScaled(src, sw, sh, (ctx, w, h) => ctx.drawImage(src, 0, 0, w, h));
+          resolve(encodeCanvas(canvas));
+        } catch (e) {
+          reject("Couldn’t decode TIFF “" + file.name + "”. Try exporting as PNG.");
+        }
+      };
+      fr.onerror = () => reject("Couldn’t read “" + file.name + "”.");
+      fr.readAsArrayBuffer(file);
+      return;
+    }
+
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = drawScaled(img, img.width, img.height, (ctx, w, h) => ctx.drawImage(img, 0, 0, w, h));
+      resolve(encodeCanvas(canvas));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject("Couldn’t read “" + file.name + "”. Use PNG, JPG, WEBP, GIF, BMP, or TIFF (HEIC isn’t supported — export as JPG first).");
+    };
+    img.src = url;
+  });
+}
+
+async function onImagePicked(fileList) {
+  const files = [...fileList];
+  if (!files.length) return;
+  for (const file of files) {
+    if (pendingImages.length >= MAX_IMAGES) {
+      flashLimit("Up to " + MAX_IMAGES + " images — extra files skipped.");
+      break;
+    }
+    try {
+      pendingImages.push(await processFile(file));
+      renderPreview();
+    } catch (msg) {
+      flashLimit(msg);
+    }
+  }
+  $("imgInput").value = "";
+}
+
+// ---- Add from Hugging Face ----
+function isInstalled(id) { return installedSet.has(id) || installedSet.has(id + ":latest"); }
+function openModal() {
+  // Pre-fill with the currently selected model's ID if it isn't installed yet.
+  const cands = compareMode ? [$("model").value, $("modelB").value] : [$("model").value];
+  const need = cands.find(id => id && !isInstalled(id));
+  $("hfInput").value = need || "";
+  $("overlay").classList.add("open");
+  $("hfInput").focus();
+  $("hfInput").select();
+}
+function closeModal() {
+  $("overlay").classList.remove("open");
+  $("progWrap").classList.remove("show");
+  $("barFill").style.width = "0%";
+  $("pullStatus").textContent = "";
+}
+
+// Shared pull streamer. Calls onProgress({pct, status, error, done}); resolves {ok}.
+async function streamPull(model, onProgress) {
+  try {
+    const res = await fetch("/api/pull", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model }),
+    });
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "", ok = false;
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let nl;
+      while ((nl = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, nl).trim();
+        buf = buf.slice(nl + 1);
+        if (!line) continue;
+        const obj = JSON.parse(line);
+        if (obj.error) { onProgress({ error: cleanError(obj.error) }); continue; }
+        const pct = (obj.total && obj.completed) ? Math.round((obj.completed / obj.total) * 100) : null;
+        if (obj.status === "success") { ok = true; onProgress({ pct: 100, status: "success", done: true }); }
+        else onProgress({ pct, status: obj.status });
+      }
+    }
+    return { ok };
+  } catch (e) {
+    onProgress({ error: "Connection error: " + e.message });
+    return { ok: false };
+  }
+}
+
+async function doPull() {
+  const model = $("hfInput").value.trim();
+  if (!model) return;
+  $("doPull").disabled = true;
+  $("progWrap").classList.add("show");
+  $("pullStatus").textContent = "Starting download…";
+  const { ok } = await streamPull(model, (p) => {
+    if (p.error) { $("pullStatus").textContent = "⚠ " + p.error; return; }
+    if (p.pct != null) $("barFill").style.width = p.pct + "%";
+    if (p.done) $("pullStatus").innerHTML = '<span class="badge">✓ Downloaded.</span> Now available in the picker.';
+    else if (p.status) $("pullStatus").textContent = p.status;
+  });
+  if (ok) { await loadCatalog(); $("model").value = model; refreshPullBanner(); }
+  $("doPull").disabled = false;
+}
+
+// ---- One-click pull banner (for uninstalled selected models) ----
+function selectedModels() {
+  return compareMode ? [$("model").value, $("modelB").value] : [$("model").value];
+}
+function refreshPullBanner() {
+  const banner = $("pullBanner");
+  const need = [...new Set(selectedModels().filter(id => id && !isInstalled(id)))];
+  banner.innerHTML = "";
+  if (!need.length) { banner.classList.remove("show"); return; }
+  banner.classList.add("show");
+  const id = need[0];
+  const txt = document.createElement("span");
+  txt.className = "grow";
+  txt.innerHTML = `<b>${labelFor(id)}</b> isn’t installed yet.`;
+  const btn = document.createElement("button");
+  btn.textContent = "⬇ Pull this model";
+  btn.onclick = () => bannerPull(id);
+  banner.appendChild(txt);
+  banner.appendChild(btn);
+}
+async function bannerPull(id) {
+  const banner = $("pullBanner");
+  banner.innerHTML = "";
+  const label = document.createElement("span");
+  label.className = "pstat";
+  label.textContent = "Pulling " + labelFor(id) + "…";
+  const bar = document.createElement("div");
+  bar.className = "bar"; bar.innerHTML = "<div></div>";
+  const pct = document.createElement("span");
+  pct.className = "pstat";
+  banner.appendChild(label); banner.appendChild(bar); banner.appendChild(pct);
+
+  const { ok } = await streamPull(id, (p) => {
+    if (p.error) { pct.textContent = "⚠ " + p.error; return; }
+    if (p.pct != null) { bar.firstChild.style.width = p.pct + "%"; pct.textContent = p.pct + "%"; }
+    else if (p.status) pct.textContent = p.status;
+  });
+  if (ok) { await loadCatalog(); render(); }
+  refreshPullBanner();
+}
+
+// ---- wiring ----
+$("send").onclick = send;
+$("input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+});
+$("input").addEventListener("input", function () {
+  this.style.height = "auto";
+  this.style.height = Math.min(this.scrollHeight, 160) + "px";
+  const n = this.value.length;
+  const c = $("counter");
+  c.textContent = n + " / " + MAX_CHARS;
+  c.classList.toggle("show", n > 0);
+  c.classList.toggle("over", n >= MAX_CHARS);
+});
+$("clearBtn").onclick = () => { turns = []; clearImages(); render(); };
+$("addBtn").onclick = openModal;
+$("cancelAdd").onclick = closeModal;
+$("doPull").onclick = doPull;
+$("compareBtn").onclick = () => {
+  compareMode = !compareMode;
+  document.body.classList.toggle("compare", compareMode);
+  $("compareBtn").classList.toggle("active", compareMode);
+  render();
+  renderPreview();
+  refreshPullBanner();
+};
+$("attachBtn").onclick = () => $("imgInput").click();
+$("imgInput").onchange = (e) => onImagePicked(e.target.files);
+$("model").onchange = () => { render(); renderPreview(); refreshPullBanner(); };
+$("modelB").onchange = () => { render(); renderPreview(); refreshPullBanner(); };
+$("overlay").addEventListener("click", (e) => { if (e.target === $("overlay")) closeModal(); });
+document.querySelectorAll(".examples code").forEach(c => {
+  c.onclick = () => { $("hfInput").value = c.getAttribute("data-fill"); };
+});
+document.querySelectorAll("#exGrid .ex-card").forEach(c => {
+  c.onclick = () => {
+    if ($("send").disabled) return;
+    $("input").value = c.getAttribute("data-p");
+    send();
+  };
+});
+$("infoBtn").onclick = (e) => { e.stopPropagation(); $("limitsPop").classList.toggle("show"); };
+document.addEventListener("click", (e) => {
+  if (!$("limitsPop").contains(e.target) && e.target !== $("infoBtn"))
+    $("limitsPop").classList.remove("show");
+});
+
+loadCatalog();
+render();
+</script>
+</body>
+</html>

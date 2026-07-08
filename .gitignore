@@ -1,0 +1,22 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment / secrets (none used today, but guard against future ones)
+.env
+*.env
+secrets.*
+*_token*
+*credentials*
+
+# OS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+
+# Local model cache (should never be committed)
+*.gguf

@@ -1,0 +1,94 @@
+{
+  "curated": [
+    {
+      "group": "Medical",
+      "models": [
+        {
+          "id": "medgemma",
+          "label": "MedGemma 4B",
+          "vision": true,
+          "note": "Google's medical VLM (Gemma 3); radiology, pathology, dermatology, ophthalmology"
+        },
+        {
+          "id": "hf.co/MoMonir/Llama3-OpenBioLLM-8B-GGUF",
+          "label": "OpenBioLLM 8B",
+          "note": "Biomedical fine-tune of Llama 3; beats larger models on biomed benchmarks"
+        },
+        {
+          "id": "hf.co/MaziyarPanahi/BioMistral-7B-GGUF",
+          "label": "BioMistral 7B",
+          "note": "Mistral fine-tuned on PubMed Central; strong for entity extraction / triage"
+        },
+        {
+          "id": "meditron",
+          "label": "Meditron 7B",
+          "note": "EPFL/Yale clinical model trained on PubMed + guidelines"
+        }
+      ]
+    },
+    {
+      "group": "General",
+      "models": [
+        {
+          "id": "hf.co/EnlistedGhost/Pixtral-12B-Ollama-GGUF",
+          "label": "Pixtral 12B",
+          "vision": true,
+          "note": "Mistral AI (France), Apache-2.0; top open general VLM — OCR, charts, visual Q&A"
+        },
+        {
+          "id": "llama3.2-vision:11b",
+          "label": "Llama 3.2 Vision 11B",
+          "vision": true,
+          "note": "Meta general VLM baseline — contrast with medical pretraining"
+        },
+        {
+          "id": "gemma3:4b",
+          "label": "Gemma 3 4B",
+          "vision": true,
+          "note": "Google Gemma 3; native Ollama vision — reliable fast fallback"
+        },
+        {
+          "id": "llava:7b",
+          "label": "LLaVA 7B",
+          "vision": true,
+          "note": "Classic open vision-language model, fast"
+        },
+        {
+          "id": "moondream",
+          "label": "Moondream",
+          "vision": true,
+          "fast": true,
+          "note": "Tiny/instant vision model; safe live-demo fallback"
+        },
+        {
+          "id": "llama3.1:8b",
+          "label": "Llama 3.1 8B",
+          "note": "Meta general-purpose baseline"
+        },
+        {
+          "id": "mistral:7b",
+          "label": "Mistral 7B",
+          "note": "Fast, capable general model"
+        },
+        {
+          "id": "gemma2:9b",
+          "label": "Gemma 2 9B",
+          "note": "Google open model"
+        },
+        {
+          "id": "phi3:mini",
+          "label": "Phi-3 Mini (3.8B)",
+          "fast": true,
+          "note": "Instant responses; safe live-demo fallback"
+        },
+        {
+          "id": "llama3.2:3b",
+          "label": "Llama 3.2 3B",
+          "fast": true,
+          "note": "Compact Meta model"
+        }
+      ]
+    }
+  ],
+  "preload": ["phi3:mini", "hf.co/MaziyarPanahi/BioMistral-7B-GGUF", "medgemma", "gemma3:4b"]
+}
