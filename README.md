@@ -1,13 +1,15 @@
 # Open Model Explorer
 
+<img src="https://github.com/lynnlangit/open-model-explorer/blob/main/images/open-model-app.png">
+
 A local chatbot harness for exploring open **foundational** and **medical** LLMs —
 pick a model, chat with it, compare two side by side, upload medical images, and add
 any model from Hugging Face live. Everything runs on your Mac via Ollama; **nothing
 leaves the device.**  
 
-Works with text (example below) or images (animated example further down this page).  
+Works with text (example above) or images (animated example below).  
 
-<img src="https://github.com/lynnlangit/open-model-explorer/blob/main/images/open-model-app.png">
+<img src="https://github.com/lynnlangit/open-model-explorer/blob/main/images/demo-vision.gif">
 
 ## What it does
 
